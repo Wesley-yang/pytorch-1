@@ -951,9 +951,6 @@ def tensordot(a, b, dims=2, out: Optional[torch.Tensor] = None):  # noqa: F811
         dims_a = list(range(-dims, 0))
         dims_b = list(range(dims))
 
-    if len(dims_a) == 0 or len(dims_b) == 0:
-        raise RuntimeError(f"unsupported input to tensordot, got dims={dims}")
-
     if out is None:
         return _VF.tensordot(a, b, dims_a, dims_b)  # type: ignore[attr-defined]
     else:
