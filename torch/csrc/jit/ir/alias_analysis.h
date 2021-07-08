@@ -125,6 +125,10 @@ class AliasDb {
   TORCH_API bool dumpToGraphvizFile(const char* filename) const;
   TORCH_API std::string toGraphviz() const;
 
+  // Returns `true` if the given element is mutable or if it is a
+  // container type with an internal mutable element (e.g.
+  // `Tuple[int, Tensor]` has an internal mutable type `Tensor`, so
+  // it would be considered a "mutable type" in AliasDb)
   static bool isMutableType(const Value* v);
   static bool isMutableType(const TypePtr& type);
 
@@ -221,7 +225,7 @@ class AliasDb {
       bool add_wildcard_to_contained_elems = true);
   Element* getOrCreateElement(const Value* value);
 
-  c10::optional<TypePtr> getMutableTypePtr(const TypePtr& type) const;
+  c10::optional<TypePtr> mapTypeToAliasTypeSetPtr(const TypePtr& type) const;
   bool functionalNonEscapingListUse(const Use& use) const;
 
   bool isContainerType(const TypePtr& type) const;
@@ -241,7 +245,7 @@ class AliasDb {
   ska::flat_hash_map<const Value*, Element*> elementMap_;
   // All wildcard elements (one for each unique mutable type).
   std::unordered_map<TypePtr, Element*, HashType, EqualType> wildcardIndex_;
-  Element* getWildcard(const TypePtr& type) const;
+  std::vector<Element*> getWildcard(const TypePtr& type) const;
   c10::optional<Element*> tryGetOrCreateWildcard(const TypePtr& type);
   void addContainedTypesToFreshElement(
       Element* container_elem,
