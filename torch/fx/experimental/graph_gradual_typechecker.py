@@ -344,6 +344,50 @@ def maxpool2d_inference_rule(n: Node, module_instance):
     return n.type
 
 
+
+def linear_check(tensor_type, module_instance):
+    """
+    Checks that an input tensor type satisfies the conditions for linear operation
+    and returns the output type based on in and out features given by module_instance
+    """
+    if len(tensor_type.__args__) >= 2:
+        if is_consistent(module_instance.in_features, tensor_type.__args__[-1]):
+            # Todo backwards propagation
+            new_type_args = list(tensor_type.__args__)
+            new_type_args[-1] = module_instance.out_features
+            return TensorType(tuple(new_type_args))
+        else:
+            raise TypeError(f'Inconsistent {module_instance.in_features} and {tensor_type.__args__[-1]} in {module_instance}')
+    else:
+        raise TypeError(f'Type {tensor_type} must have rank 2 or more.')
+
+
+@register_inference_rule(torch.nn.Linear)
+def linear_inference_rule(n: Node, module_instance):
+    assert isinstance(n.args[0], Node)
+    if isinstance(n.args[0].type, TensorType) and isinstance(n.type, TensorType):
+        # Todo: type inference for argument
+        new_res_type_from_arg = linear_check(n.args[0].type, module_instance)
+        n.type = get_greatest_upper_bound(new_res_type_from_arg, n.type)
+        return n.type
+
+    elif isinstance(n.args[0].type, TensorType) and n.type == Dyn:
+        new_type = linear_check(n.args[0].type, module_instance)
+        n.type = new_type
+        return n.type
+
+    elif isinstance(n.type, TensorType) and n.args[0].type == Dyn:
+        # Todo: type inference for argument
+        new_type = linear_check(n.args[0].type, module_instance)
+        n.type = get_greatest_upper_bound(new_type, n.type)
+        return n.type
+
+    elif n.args[0].type == Dyn and n.type == Dyn:
+        return Dyn
+    else:
+        raise TypeError(f'Wrong types {n.type} and {n.args[0].type} in {module_instance}')
+
+
 class GraphTypeChecker:
     def __init__(self, env, traced):
         self.env = env
